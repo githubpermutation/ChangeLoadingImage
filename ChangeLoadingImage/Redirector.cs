@@ -113,19 +113,14 @@ namespace ChangeLoadingImage
             ReflectionUtils.WritePrivate<LoadingAnimation> (loadingAnimation, "m_font", font);
             ReflectionUtils.WritePrivate<LoadingAnimation> (loadingAnimation, "m_textColor", color);
             ReflectionUtils.WritePrivate<LoadingAnimation> (loadingAnimation, "m_textSize", size);
-            ReflectionUtils.WritePrivate<LoadingAnimation> (loadingAnimation, "m_title", title);
-            ReflectionUtils.WritePrivate<LoadingAnimation> (loadingAnimation, "m_text", text);
 
-            ReflectionUtils.WritePrivate<LoadingAnimation> (loadingAnimation, "m_textLoaded", true);
-            ReflectionUtils.WritePrivate<LoadingAnimation> (loadingAnimation, "m_textAlpha", 0f);
-
-            MethodInfo mi = typeof(LoadingAnimation).GetMethod ("GenerateTextMesh", BindingFlags.NonPublic | BindingFlags.Instance);
-            mi.Invoke (loadingAnimation, null);
+            modifyText(title, text);
 
             revertSetText ();
         }
 
         #region change the image
+
         private void changeImage (LoadingImageContainer img, Texture2D bg)
         {
             Material newMaterial = new Material (img.material);
@@ -307,6 +302,17 @@ namespace ChangeLoadingImage
             if (!String.IsNullOrEmpty (entry.extraInfo)) {
                 text += " (" + entry.extraInfo + ")";
             }
+        }
+
+        private void modifyText (string title, string text)
+        {
+            ReflectionUtils.WritePrivate<LoadingAnimation> (loadingAnimation, "m_title", title);
+            ReflectionUtils.WritePrivate<LoadingAnimation> (loadingAnimation, "m_text", text);
+            ReflectionUtils.WritePrivate<LoadingAnimation> (loadingAnimation, "m_textLoaded", true);
+            ReflectionUtils.WritePrivate<LoadingAnimation> (loadingAnimation, "m_textAlpha", 0f);
+            
+            MethodInfo mi = typeof(LoadingAnimation).GetMethod ("GenerateTextMesh", BindingFlags.NonPublic | BindingFlags.Instance);
+            mi.Invoke (loadingAnimation, null);
         }
 
         private static bool versionIsSupported ()
