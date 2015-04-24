@@ -60,6 +60,8 @@ ChangeLoadingImage should fail gracefully when it cannot load an image, but I mi
 
 Some of the default image URLs may not be reachable at any moment. ChangeLoadingImage will inform you if it can't load something.
 
+The background will be black while an image is loaded. There is no preloading, yet.
+
 Please report any issues you find.
 
 #Attributions
