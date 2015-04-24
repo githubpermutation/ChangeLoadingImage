@@ -7,7 +7,7 @@ This mod changes the loading image to a random image from a user-supplied list.
 ##Getting started
 Subscribe to the mod via the Steam Workshop (or put it in your local Mods if you are compiling manually) and enable it in the game's content manager.
 
-Once added, it will read (and create if needed) the file ChangeLoadingImageList.txt in your Cities: Skylines user folder:
+Once added and enabled, when loading a game/editor it will read (and create if needed) the file ChangeLoadingImageList.txt in your Cities: Skylines user folder:
 * Windows: `C:\Users\<username>\AppData\Local\Colossal Order\Cities_Skylines\ModConfig\`
 * Mac: `/Users/<username>/Library/Application Support/Colossal Order/Cities_Skylines/ModConfig/`
 * Linux: `/home/<username>/.local/share/Colossal Order/Cities_Skylines/ModConfig/`
