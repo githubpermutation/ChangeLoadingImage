@@ -36,6 +36,9 @@ namespace ChangeLoadingImage
 
         public void Initialize ()
         {
+            if(!isSupported)
+                return;
+
             redirectSetImage ();
             redirectSetText ();
         }
