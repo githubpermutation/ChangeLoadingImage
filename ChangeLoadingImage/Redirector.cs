@@ -188,7 +188,7 @@ namespace ChangeLoadingImage
             return savegameMetaData;
         }
 
-        public static SaveGameMetaData getMetaDataForDateTime (DateTime needle)
+        private static SaveGameMetaData getMetaDataForDateTime (DateTime needle)
         {
             SaveGameMetaData result = null;
             foreach (Package.Asset current in PackageManager.FilterAssets(new Package.AssetType[]
