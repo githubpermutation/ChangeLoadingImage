@@ -7,111 +7,125 @@ namespace ChangeLoadingImage
     public class Blur : MonoBehaviour
     {
         
-        private static float avgR = 0;
-        private static float avgG = 0;
-        private static float avgB = 0;
-        private static float blurPixelCount = 0;
         public int radius = 2;
         public int iterations = 2;
-        
-        public static Texture2D FastBlur (Texture2D image, int radius, int iterations)
+
+        public static Texture2D FastBlur(Texture2D image, int radius, int iterations)
         {
             Texture2D tex = image;
-            
-            for (var i = 0; i < iterations; i++) {
-                
-                tex = BlurImage (tex, radius, true);
-                tex = BlurImage (tex, radius, false);
-                
+
+            for (var i = 0; i < iterations; i++)
+            {
+                tex = BlurImage(tex, radius);
             }
-            
+
             return tex;
         }
-        
-        static Texture2D BlurImage (Texture2D image, int blurSize, bool horizontal)
+
+        private static void GenerateGaussianKernel(int radius, out float[] kernel)
         {
-            
-            Texture2D blurred = new Texture2D (image.width, image.height);
-            int _W = image.width;
-            int _H = image.height;
-            int xx, yy, x, y;
-            
-            if (horizontal) {
-                for (yy = 0; yy < _H; yy++) {
-                    for (xx = 0; xx < _W; xx++) {
-                        ResetPixel ();
-                        
-                        //Right side of pixel
-                        
-                        for (x = xx; (x < xx + blurSize && x < _W); x++) {
-                            AddPixel (image.GetPixel (x, yy));
-                        }
-                        
-                        //Left side of pixel
-                        
-                        for (x = xx; (x > xx - blurSize && x > 0); x--) {
-                            AddPixel (image.GetPixel (x, yy));
-                            
-                        }
-                        
-                        
-                        CalcPixel ();
-                        
-                        for (x = xx; x < xx + blurSize && x < _W; x++) {
-                            blurred.SetPixel (x, yy, new Color (avgR, avgG, avgB, 1.0f));
-                            
-                        }
-                    }
-                }
-            } else {
-                for (xx = 0; xx < _W; xx++) {
-                    for (yy = 0; yy < _H; yy++) {
-                        ResetPixel ();
-                        
-                        //Over pixel
-                        
-                        for (y = yy; (y < yy + blurSize && y < _H); y++) {
-                            AddPixel (image.GetPixel (xx, y));
-                        }
-                        //Under pixel
-                        
-                        for (y = yy; (y > yy - blurSize && y > 0); y--) {
-                            AddPixel (image.GetPixel (xx, y));
-                        }
-                        CalcPixel ();
-                        for (y = yy; y < yy + blurSize && y < _H; y++) {
-                            blurred.SetPixel (xx, y, new Color (avgR, avgG, avgB, 1.0f));
-                            
-                        }
-                    }
-                }
+            if (radius <= 0)
+            {
+                kernel = new float[] { 1.0f };
+                return;
+            }
+
+            int kernelSize = (radius * 2) + 1;
+            kernel = new float[kernelSize];
+            float sigma = (float)radius; // Per instructions, radius is sigma
+            float sum = 0f;
+
+            float twoSigmaSq = 2 * sigma * sigma;
+            float sqrtTwoPiSigmaSq = Mathf.Sqrt(2 * Mathf.PI * sigma * sigma);
+
+            if (sqrtTwoPiSigmaSq == 0) // Should be caught by radius <= 0, but as a safeguard
+            {
+                kernel = new float[] { 1.0f };
+                return;
+            }
+
+            for (int i = 0; i < kernelSize; i++)
+            {
+                int x = i - radius;
+                kernel[i] = (1.0f / sqrtTwoPiSigmaSq) * Mathf.Exp(-(x * x) / twoSigmaSq);
+                sum += kernel[i];
+            }
+
+            // Normalize the kernel
+            if (sum == 0 || float.IsNaN(sum) || float.IsInfinity(sum))
+            {
+                // Fallback if sum is zero, NaN, or Inf (e.g. if sigma was tiny and all kernel values underflowed or overflowed)
+                // Create a kernel that does nothing (center pixel gets 1.0 weight).
+                for(int i=0; i<kernelSize; ++i) kernel[i] = 0f;
+                if (kernelSize > 0) kernel[kernelSize/2] = 1.0f; // kernelRadius is kernelSize/2
+                return;
             }
             
-            blurred.Apply ();
+            for (int i = 0; i < kernelSize; i++)
+            {
+                kernel[i] /= sum;
+            }
+        }
+
+        static Texture2D BlurImage(Texture2D image, int blurRadius)
+        {
+            int _W = image.width;
+            int _H = image.height;
+            Texture2D blurred = new Texture2D(_W, _H, image.format, false);
+            Texture2D tempTexture = new Texture2D(_W, _H, image.format, false); // For intermediate horizontal blur
+
+            float[] kernel;
+            GenerateGaussianKernel(blurRadius, out kernel);
+            int kernelRadius = kernel.Length / 2;
+
+            // Horizontal Pass
+            for (int yy = 0; yy < _H; yy++)
+            {
+                for (int xx = 0; xx < _W; xx++)
+                {
+                    float r = 0f, g = 0f, b = 0f;
+                    for (int k = -kernelRadius; k <= kernelRadius; k++)
+                    {
+                        int x = Mathf.Clamp(xx + k, 0, _W - 1);
+                        Color pixel = image.GetPixel(x, yy);
+                        float weight = kernel[k + kernelRadius];
+                        r += pixel.r * weight;
+                        g += pixel.g * weight;
+                        b += pixel.b * weight;
+                    }
+                    tempTexture.SetPixel(xx, yy, new Color(r, g, b, 1.0f));
+                }
+            }
+            tempTexture.Apply();
+
+            // Vertical Pass (operates on tempTexture)
+            for (int xx = 0; xx < _W; xx++)
+            {
+                for (int yy = 0; yy < _H; yy++)
+                {
+                    float r = 0f, g = 0f, b = 0f;
+                    for (int k = -kernelRadius; k <= kernelRadius; k++)
+                    {
+                        int y = Mathf.Clamp(yy + k, 0, _H - 1);
+                        Color pixel = tempTexture.GetPixel(xx, y); // Read from horizontally blurred texture
+                        float weight = kernel[k + kernelRadius];
+                        r += pixel.r * weight;
+                        g += pixel.g * weight;
+                        b += pixel.b * weight;
+                    }
+                    blurred.SetPixel(xx, yy, new Color(r, g, b, 1.0f));
+                }
+            }
+            blurred.Apply();
+            
+            // Cleanup intermediate texture
+            if (Application.isPlaying) {
+                Destroy(tempTexture);
+            } else {
+                DestroyImmediate(tempTexture);
+            }
+
             return blurred;
-        }
-        
-        static void AddPixel (Color pixel)
-        {
-            avgR += pixel.r;
-            avgG += pixel.g;
-            avgB += pixel.b;
-            blurPixelCount++;
-        }
-        
-        static void ResetPixel ()
-        {
-            avgR = 0.0f;
-            avgG = 0.0f;
-            avgB = 0.0f;
-            blurPixelCount = 0;
-        }
-        
-        static void CalcPixel ()
-        {
-            avgR = avgR / blurPixelCount;
-            avgG = avgG / blurPixelCount;
-            avgB = avgB / blurPixelCount;
         }
     }
 }
